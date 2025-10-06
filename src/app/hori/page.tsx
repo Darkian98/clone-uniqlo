@@ -1,6 +1,6 @@
 "use client"
 import { motion, animate, useMotionValue } from "framer-motion";
-import { useState, useRef } from "react";
+import { useState } from "react";
 
 const posts = [
   { id: 1, color: "#1abc9c", text: "🎵 Video 1" },
@@ -8,113 +8,105 @@ const posts = [
   { id: 3, color: "#9b59b6", text: "😎 Video 3" },
 ];
 
-export default function TikTokScrollStable() {
+export default function TikTokHorizontalStable() {
   const [index, setIndex] = useState(0);
-  const y = useMotionValue(0);
-  const animating = useRef(false);
+  const x = useMotionValue(0);
 
   const nextIndex = (index + 1) % posts.length;
   const prevIndex = (index - 1 + posts.length) % posts.length;
 
   const handleDragEnd = (_: any, info: any) => {
-    if (animating.current) return; // evita múltiples animaciones
-    const threshold = 100;
-    const distance = info.offset.y;
+    const threshold = window.innerWidth / 4; // mínimo 25% del ancho
+    const distance = info.offset.x;
 
-    if (distance < -threshold) {
-      slide("next")
-    } else if (distance > threshold) {
-      slide("prev");
-    } else {
-      animate(y, 0, { type: "spring", stiffness: 300 });
-    }
+    let newIndex = index;
 
-  };
+    if (distance < -threshold) newIndex = (index + 1) % posts.length;
+    else if (distance > threshold) newIndex = (index - 1 + posts.length) % posts.length;
 
-  const slide = (dir: "next" | "prev") => {
-    animating.current = true;
-    const offset = dir === "next" ? -window.innerHeight : window.innerHeight;
-
-    animate(y, offset, {
-      duration: 0.4,
-      ease: "easeInOut",
+    animate(x, newIndex === index ? 0 : distance < 0 ? -window.innerWidth : window.innerWidth, {
+      type: "spring",
+      stiffness: 300,
+      damping: 25,
       onComplete: () => {
-        setIndex((i) =>
-          dir === "next" ? (i + 1) % posts.length : (i - 1 + posts.length) % posts.length
-        );
-        y.set(0);
-        animating.current = false;
+        setIndex(newIndex);
+        x.set(0);
       },
     });
   };
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden touch-none select-none">
+    <div className="relative w-screen h-screen overflow-hidden select-none">
       <motion.div
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
         onDragEnd={handleDragEnd}
         style={{
-          y,
-          height: "300vh",
+          x,
+          height: "100vh",
+          width: "300vw",
+          display: "flex",
           position: "absolute",
-          top: "-100vh",
-          width: "100%",
-          touchAction: "none",
+          left: "-100vw",
         }}
       >
-        {/* Pantalla previa */}
+        {/* Prev */}
         <div
           style={{
+            width: "100vw",
             height: "100vh",
             background: posts[prevIndex].color,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "white",
             fontSize: "2rem",
+            color: "white",
           }}
         >
           {posts[prevIndex].text}
         </div>
 
-        {/* Pantalla actual */}
+        {/* Current */}
         <div
           style={{
+            width: "100vw",
             height: "100vh",
             background: posts[index].color,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "white",
             fontSize: "2rem",
+            color: "white",
           }}
         >
           {posts[index].text}
         </div>
 
-        {/* Pantalla siguiente */}
+        {/* Next */}
         <div
           style={{
+            width: "100vw",
             height: "100vh",
             background: posts[nextIndex].color,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "white",
             fontSize: "2rem",
+            color: "white",
           }}
         >
           {posts[nextIndex].text}
         </div>
       </motion.div>
 
-      <div className="fixed top-1/2 right-6 transform -translate-y-1/2 flex flex-col items-center gap-1">
+      {/* Indicadores */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
         {posts.map((_, i) => (
           <div
             key={i}
-            className={`w-1 h-3 rounded-full transition-all duration-300 ${i === index ? 'h-6 bg-white' : 'h-2 bg-white/50'
-              }`}
+            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              i === index ? "bg-white" : "bg-white/50"
+            }`}
           />
         ))}
       </div>
