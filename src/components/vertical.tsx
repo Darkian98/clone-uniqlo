@@ -2,12 +2,6 @@
 import { motion, animate, useMotionValue } from "framer-motion";
 import { useState, useRef, FC } from "react";
 
-// const posts = [
-//     { id: 1, color: "#e74c3c", text: "📱 Vertical 1" },
-//     { id: 2, color: "#f39c12", text: "⭐ Vertical 2" },
-//     { id: 3, color: "#2ecc71", text: "💚 Vertical 3" },
-// ];
-
 interface IVertical {
     id: number,
     color: string,
@@ -29,11 +23,10 @@ export const Vertical: FC<{ posts: Array<any> }> = ({ posts }) => {
         const threshold = 120;
 
         if (distance < -threshold) {
-            slide("next");  // arrastraste hacia arriba suficiente
+            slide("next");
         } else if (distance > threshold) {
-            slide("prev");  // arrastraste hacia abajo suficiente
+            slide("prev");
         } else {
-            // volver suavemente al centro
             animate(y, 0, { duration: 0.25, ease: "easeOut" });
         }
     };
@@ -43,15 +36,17 @@ export const Vertical: FC<{ posts: Array<any> }> = ({ posts }) => {
         const offset = dir === "next" ? -window.innerHeight : window.innerHeight;
 
         animate(y, offset, {
-            type: "tween", 
             duration: 0.3,
-            ease: [0.22, 0.61, 0.36, 1],
+            ease: "easeOut",
             onComplete: () => {
-                setIndex((i) =>
-                    dir === "next" ? (i + 1) % posts.length : (i - 1 + posts.length) % posts.length
-                );
-                y.set(0);
-                animating.current = false;
+                // Usar setTimeout para suavizar el cambio
+                requestAnimationFrame(() => {
+                    setIndex((i) =>
+                        dir === "next" ? (i + 1) % posts.length : (i - 1 + posts.length) % posts.length
+                    );
+                    y.set(0);
+                    animating.current = false;
+                });
             },
         });
     };
@@ -60,27 +55,28 @@ export const Vertical: FC<{ posts: Array<any> }> = ({ posts }) => {
         <div className="relative h-full w-full overflow-hidden">
             <motion.div
                 drag="y"
-                // dragConstraints={{ top: 0, bottom: 0 }}
-                dragElastic={0}
-                dragDirectionLock 
+                dragElastic={0.1}
+                dragDirectionLock
                 onDragEnd={handleDragEnd}
                 style={{
                     y,
-                    height: "100vh",
+                    height: "300vh",
                     position: "absolute",
                     top: "-100vh",
                     width: "100%",
+                    willChange: "transform", // ← Optimización GPU
                 }}
             >
                 {[prevIndex, index, nextIndex].map((i, pos) => (
                     <div
-                        key={`${i}`}
+                        key={`${i}-${pos}`} // ← Cambié la key para forzar re-mount
                         style={{
-                            height: "100vh",     // ← CORRECCIÓN
-                            position: "relative", // ← NECESARIO
+                            height: "100vh",
+                            position: "relative",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
+                            overflow: "hidden", // ← Importante
                         }}
                     >
                         <HandlerResource type={posts[i].resource.type} {...posts[i].resource} />
@@ -89,12 +85,13 @@ export const Vertical: FC<{ posts: Array<any> }> = ({ posts }) => {
             </motion.div>
 
             {/* Indicadores verticales */}
-            <div className="absolute top-1/2 right-4 -translate-y-1/2 flex flex-col gap-2">
+            <div className="absolute top-1/2 right-4 -translate-y-1/2 flex flex-col gap-2 z-20">
                 {posts.map((_, i) => (
                     <div
                         key={i}
-                        className={`w-1 rounded-full transition-all duration-300 ${i === index ? "h-6 bg-white" : "h-2 bg-white/50"
-                            }`}
+                        className={`w-1 rounded-full transition-all duration-300 ${
+                            i === index ? "h-6 bg-white" : "h-2 bg-white/50"
+                        }`}
                     />
                 ))}
             </div>
@@ -120,18 +117,20 @@ const HandlerResource: FC<Resource> = (resource) => {
     return <Component {...resource} />;
 };
 
-
 const ImgRender = ({ url }: any) => {
     return (
         <img
             src={url}
+            alt=""
+            loading="eager" // ← Pre-carga las imágenes
             style={{
                 position: "absolute",
                 top: 0,
                 left: 0,
                 width: "100%",
                 height: "100%",
-                objectFit: "cover"
+                objectFit: "cover",
+                zIndex: 0,
             }}
         />
     );
@@ -148,9 +147,13 @@ const VideoRender = ({ url }: any) => {
             playsInline
             preload="auto"
             style={{
+                position: "absolute", // ← Cambio importante
+                top: 0,
+                left: 0,
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
+                zIndex: 0,
             }}
         />
     );
@@ -160,21 +163,14 @@ const TextRender = ({ color }: any) => {
     return (
         <div
             style={{
+                position: "absolute", // ← Consistencia
+                top: 0,
+                left: 0,
                 width: "100%",
                 height: "100%",
                 background: color,
+                zIndex: 0,
             }}
         />
     );
 }
-
-const Slide = ({ children }: any) => (
-    <div style={{
-        height: "100vh",
-        width: "100%",
-        overflow: "hidden",
-        position: "relative"
-    }}>
-        {children}
-    </div>
-);
