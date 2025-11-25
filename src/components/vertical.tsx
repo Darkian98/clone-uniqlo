@@ -10,8 +10,22 @@ interface IVertical {
 
 export const Vertical: FC<{ posts: Array<any> }> = ({ posts }) => {
     const [index, setIndex] = useState(0);
+    const [viewportHeight, setViewportHeight] = useState(0);
+    const [innerHeightSafe, setInnerHeightSafe] = useState(0);
     const y = useMotionValue(0);
     const animating = useRef(false);
+
+    // Calcular altura real del viewport
+    useEffect(() => {
+        const updateHeight = () => {
+            setViewportHeight(window.innerHeight);
+        };
+
+        updateHeight();
+        window.addEventListener('resize', updateHeight);
+
+        return () => window.removeEventListener('resize', updateHeight);
+    }, []);
 
     const nextIndex = (index + 1) % posts.length;
     const prevIndex = (index - 1 + posts.length) % posts.length;
@@ -33,13 +47,12 @@ export const Vertical: FC<{ posts: Array<any> }> = ({ posts }) => {
 
     const slide = (dir: "next" | "prev") => {
         animating.current = true;
-        const offset = dir === "next" ? -window.innerHeight : window.innerHeight;
+        const offset = dir === "next" ? -viewportHeight : viewportHeight;
 
         animate(y, offset, {
             duration: 0.3,
             ease: "easeOut",
             onComplete: () => {
-                // Usar setTimeout para suavizar el cambio
                 requestAnimationFrame(() => {
                     setIndex((i) =>
                         dir === "next" ? (i + 1) % posts.length : (i - 1 + posts.length) % posts.length
@@ -51,8 +64,15 @@ export const Vertical: FC<{ posts: Array<any> }> = ({ posts }) => {
         });
     };
 
+    useEffect(() => {
+        setViewportHeight(window.innerHeight);
+    }, []);
+
     return (
-        <div className="relative h-full w-full overflow-hidden">
+        <div
+            className="relative w-full overflow-hidden"
+            style={{ height: viewportHeight || '100vh' }}
+        >
             <motion.div
                 drag="y"
                 dragElastic={0.1}
@@ -60,23 +80,23 @@ export const Vertical: FC<{ posts: Array<any> }> = ({ posts }) => {
                 onDragEnd={handleDragEnd}
                 style={{
                     y,
-                    height: "300vh",
+                    height: (viewportHeight || innerHeightSafe) * 3,
                     position: "absolute",
-                    top: "-100vh",
+                    top: -(viewportHeight || innerHeightSafe),
                     width: "100%",
-                    willChange: "transform", // ← Optimización GPU
+                    willChange: "transform",
                 }}
             >
-                {[prevIndex, index, nextIndex].map((i, pos) => (
+                {[prevIndex, index, nextIndex].map((i) => (
                     <div
-                        key={`${i}`} // ← Cambié la key para forzar re-mount
+                        key={i}
                         style={{
-                            height: "100vh",
+                            height: viewportHeight || '100vh',
                             position: "relative",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            overflow: "hidden", // ← Importante
+                            overflow: "hidden",
                         }}
                     >
                         <HandlerResource type={posts[i].resource.type} {...posts[i].resource} />
@@ -121,7 +141,7 @@ const ImgRender = ({ url }: any) => {
         <img
             src={url}
             alt=""
-            loading="eager" // ← Pre-carga las imágenes
+            loading="eager"
             style={{
                 position: "absolute",
                 top: 0,
@@ -151,7 +171,6 @@ const VideoRender = ({ url }: any) => {
     return (
         <video
             ref={videoRef}
-            // SIN key={url} ← Esto es lo importante
             autoPlay
             loop
             muted
@@ -165,16 +184,17 @@ const VideoRender = ({ url }: any) => {
                 height: "100%",
                 objectFit: "cover",
                 zIndex: 0,
-                backgroundColor: "black", // ← Mantén negro para que no se note
+                backgroundColor: "black",
             }}
         />
     );
 }
+
 const TextRender = ({ color }: any) => {
     return (
         <div
             style={{
-                position: "absolute", // ← Consistencia
+                position: "absolute",
                 top: 0,
                 left: 0,
                 width: "100%",
