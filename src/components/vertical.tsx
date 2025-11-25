@@ -14,7 +14,7 @@ interface IVertical {
     text: string
 }
 
-export const Vertical: FC<{ posts: Array<IVertical> }> = ({ posts }) => {
+export const Vertical: FC<{ posts: Array<any> }> = ({ posts }) => {
     const [index, setIndex] = useState(0);
     const y = useMotionValue(0);
     const animating = useRef(false);
@@ -24,15 +24,17 @@ export const Vertical: FC<{ posts: Array<IVertical> }> = ({ posts }) => {
 
     const handleDragEnd = (_: any, info: any) => {
         if (animating.current) return;
-        const threshold = 100;
+
         const distance = info.offset.y;
+        const threshold = 120;
 
         if (distance < -threshold) {
-            slide("next");
+            slide("next");  // arrastraste hacia arriba suficiente
         } else if (distance > threshold) {
-            slide("prev");
+            slide("prev");  // arrastraste hacia abajo suficiente
         } else {
-            animate(y, 0, { duration: 0.2, ease: "easeOut" });
+            // volver suavemente al centro
+            animate(y, 0, { duration: 0.25, ease: "easeOut" });
         }
     };
 
@@ -41,8 +43,9 @@ export const Vertical: FC<{ posts: Array<IVertical> }> = ({ posts }) => {
         const offset = dir === "next" ? -window.innerHeight : window.innerHeight;
 
         animate(y, offset, {
+            type: "tween", 
             duration: 0.3,
-            ease: "easeOut",
+            ease: [0.22, 0.61, 0.36, 1],
             onComplete: () => {
                 setIndex((i) =>
                     dir === "next" ? (i + 1) % posts.length : (i - 1 + posts.length) % posts.length
@@ -57,32 +60,30 @@ export const Vertical: FC<{ posts: Array<IVertical> }> = ({ posts }) => {
         <div className="relative h-full w-full overflow-hidden">
             <motion.div
                 drag="y"
-                dragConstraints={{ top: 0, bottom: 0 }}
-                dragElastic={0.2}
+                // dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={0}
+                dragDirectionLock 
                 onDragEnd={handleDragEnd}
                 style={{
                     y,
-                    height: "300%",
+                    height: "100vh",
                     position: "absolute",
-                    top: "-100%",
+                    top: "-100vh",
                     width: "100%",
                 }}
             >
                 {[prevIndex, index, nextIndex].map((i, pos) => (
                     <div
-                        key={`${i}-${pos}`}
+                        key={`${i}`}
                         style={{
-                            height: "33.333%",
-                            background: posts[i].color,
+                            height: "100vh",     // ← CORRECCIÓN
+                            position: "relative", // ← NECESARIO
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            color: "white",
-                            fontSize: "1.5rem",
-                            fontWeight: "bold",
                         }}
                     >
-                        {posts[i].text}
+                        <HandlerResource type={posts[i].resource.type} {...posts[i].resource} />
                     </div>
                 ))}
             </motion.div>
@@ -100,3 +101,80 @@ export const Vertical: FC<{ posts: Array<IVertical> }> = ({ posts }) => {
         </div>
     );
 }
+
+type ResourceType = "img" | "video" | "text";
+
+interface Resource {
+    type: ResourceType;
+    [key: string]: any;
+}
+
+const HandlerResource: FC<Resource> = (resource) => {
+    const components: Record<ResourceType, React.FC<any>> = {
+        img: ImgRender,
+        video: VideoRender,
+        text: TextRender
+    };
+    const Component = components[resource.type];
+
+    return <Component {...resource} />;
+};
+
+
+const ImgRender = ({ url }: any) => {
+    return (
+        <img
+            src={url}
+            style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover"
+            }}
+        />
+    );
+}
+
+const VideoRender = ({ url }: any) => {
+    return (
+        <video
+            key={url}
+            src={url}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+            }}
+        />
+    );
+}
+
+const TextRender = ({ color }: any) => {
+    return (
+        <div
+            style={{
+                width: "100%",
+                height: "100%",
+                background: color,
+            }}
+        />
+    );
+}
+
+const Slide = ({ children }: any) => (
+    <div style={{
+        height: "100vh",
+        width: "100%",
+        overflow: "hidden",
+        position: "relative"
+    }}>
+        {children}
+    </div>
+);
