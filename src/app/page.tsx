@@ -6,6 +6,7 @@ import { posts } from "@/data/posts"
 
 export default function TikTokHorizontalStable() {
   const [index, setIndex] = useState(0);
+  const [isNavigating, setIsNavigating] = useState(false);
   const x = useMotionValue(0);
   const animating = useRef(false);
 
@@ -49,18 +50,27 @@ export default function TikTokHorizontalStable() {
     if (targetIndex === index || animating.current) return;
 
     animating.current = true;
+    setIsNavigating(true);
+    
     const direction = targetIndex > index ? -1 : 1;
+    const distance = Math.abs(targetIndex - index);
 
-    animate(x, direction * window.innerWidth, {
-      duration: 0.3,
-      ease: "easeOut",
+    animate(x, direction * window.innerWidth * distance, {
+      duration: 0.4,
+      ease: [0.25, 0.1, 0.25, 1],
       onComplete: () => {
         setIndex(targetIndex);
         x.set(0);
         animating.current = false;
+        setIsNavigating(false);
       },
     });
   };
+
+  // Renderizar todos los slides durante navegación por click, solo 3 durante drag
+  const slidesToRender = isNavigating 
+    ? posts.map((_, i) => i)
+    : [prevIndex, index, nextIndex];
 
   return (
     <div className="relative w-screen h-screen overflow-hidden select-none bg-black">
@@ -74,17 +84,19 @@ export default function TikTokHorizontalStable() {
         style={{
           x,
           height: "100vh",
-          width: "300vw",
+          width: isNavigating ? `${posts.length * 100}vw` : "300vw",
           display: "flex",
           position: "absolute",
-          left: "-100vw",
+          left: isNavigating ? "0" : "-100vw",
           touchAction: "pan-y",
         }}
       >
-        {[prevIndex, index, nextIndex].map((i, pos) => {
+        {slidesToRender.map((i) => {
+          const offset = isNavigating ? i : (i === prevIndex ? 0 : i === index ? 1 : 2);
+          
           return (
             <div
-              key={`${i}-${pos}`}
+              key={i}
               style={{
                 width: "100vw",
                 height: "100vh",
@@ -96,6 +108,7 @@ export default function TikTokHorizontalStable() {
                 fontWeight: "bold",
                 userSelect: "none",
                 position: "relative",
+                transform: isNavigating ? `translateX(${-index * 100}vw)` : "none",
               }}
             >
               <div style={{ width: "100%", height: "100%", position: "relative" }}>
@@ -115,8 +128,9 @@ export default function TikTokHorizontalStable() {
             className="flex flex-col items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity"
           >
             <div
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${i === index ? "bg-white w-6" : "bg-white/50"
-                }`}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                i === index ? "bg-white w-6" : "bg-white/50"
+              }`}
             />
             <p className="text-white text-xs">{post.title}</p>
           </div>

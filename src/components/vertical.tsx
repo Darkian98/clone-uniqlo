@@ -1,6 +1,6 @@
 "use client"
 import { motion, animate, useMotionValue } from "framer-motion";
-import { useState, useRef, FC } from "react";
+import { useState, useRef, FC, useEffect } from "react";
 
 interface IVertical {
     id: number,
@@ -69,7 +69,7 @@ export const Vertical: FC<{ posts: Array<any> }> = ({ posts }) => {
             >
                 {[prevIndex, index, nextIndex].map((i, pos) => (
                     <div
-                        key={`${i}-${pos}`} // ← Cambié la key para forzar re-mount
+                        key={`${i}`} // ← Cambié la key para forzar re-mount
                         style={{
                             height: "100vh",
                             position: "relative",
@@ -89,9 +89,8 @@ export const Vertical: FC<{ posts: Array<any> }> = ({ posts }) => {
                 {posts.map((_, i) => (
                     <div
                         key={i}
-                        className={`w-1 rounded-full transition-all duration-300 ${
-                            i === index ? "h-6 bg-white" : "h-2 bg-white/50"
-                        }`}
+                        className={`w-1 rounded-full transition-all duration-300 ${i === index ? "h-6 bg-white" : "h-2 bg-white/50"
+                            }`}
                     />
                 ))}
             </div>
@@ -137,28 +136,40 @@ const ImgRender = ({ url }: any) => {
 }
 
 const VideoRender = ({ url }: any) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.src = url;
+            videoRef.current.load();
+            videoRef.current.play().catch(() => {
+                // Ignorar errores de autoplay
+            });
+        }
+    }, [url]);
+
     return (
         <video
-            key={url}
-            src={url}
+            ref={videoRef}
+            // SIN key={url} ← Esto es lo importante
             autoPlay
             loop
             muted
             playsInline
             preload="auto"
             style={{
-                position: "absolute", // ← Cambio importante
+                position: "absolute",
                 top: 0,
                 left: 0,
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
                 zIndex: 0,
+                backgroundColor: "black", // ← Mantén negro para que no se note
             }}
         />
     );
 }
-
 const TextRender = ({ color }: any) => {
     return (
         <div
