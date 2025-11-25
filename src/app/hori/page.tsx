@@ -1,12 +1,9 @@
-"use client"
-import { motion, animate, useMotionValue } from "framer-motion";
-import { useState } from "react";
 
-const posts = [
-  { id: 1, color: "#1abc9c", text: "🎵 Video 1" },
-  { id: 2, color: "#3498db", text: "🔥 Video 2" },
-  { id: 3, color: "#9b59b6", text: "😎 Video 3" },
-];
+"use client"
+import { Vertical } from "@/components/vertical";
+import { motion, animate, useMotionValue } from "framer-motion";
+import { useState, useRef } from "react";
+import { posts } from "@/data/posts"
 
 export default function TikTokHorizontalStable() {
   const [index, setIndex] = useState(0);
@@ -16,30 +13,42 @@ export default function TikTokHorizontalStable() {
   const prevIndex = (index - 1 + posts.length) % posts.length;
 
   const handleDragEnd = (_: any, info: any) => {
-    const threshold = window.innerWidth / 4; // mínimo 25% del ancho
+    const threshold = 50;
     const distance = info.offset.x;
+    const velocity = info.velocity.x;
 
     let newIndex = index;
 
-    if (distance < -threshold) newIndex = (index + 1) % posts.length;
-    else if (distance > threshold) newIndex = (index - 1 + posts.length) % posts.length;
+    if (distance < -threshold || velocity < -500) {
+      newIndex = (index + 1) % posts.length;
+    } else if (distance > threshold || velocity > 500) {
+      newIndex = (index - 1 + posts.length) % posts.length;
+    }
 
-    animate(x, newIndex === index ? 0 : distance < 0 ? -window.innerWidth : window.innerWidth, {
-      type: "spring",
-      stiffness: 300,
-      damping: 25,
-      onComplete: () => {
-        setIndex(newIndex);
-        x.set(0);
-      },
-    });
+    if (newIndex !== index) {
+      animate(x, distance < 0 ? -window.innerWidth : window.innerWidth, {
+        duration: 0.3,
+        ease: "easeOut",
+        onComplete: () => {
+          setIndex(newIndex);
+          x.set(0);
+        },
+      });
+    } else {
+      animate(x, 0, {
+        duration: 0.2,
+        ease: "easeOut",
+      });
+    }
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden select-none">
+    <div className="relative w-screen h-screen overflow-hidden select-none bg-black">
       <motion.div
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.2}
+        dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
         onDragEnd={handleDragEnd}
         style={{
           x,
@@ -48,67 +57,49 @@ export default function TikTokHorizontalStable() {
           display: "flex",
           position: "absolute",
           left: "-100vw",
+          touchAction: "pan-y",
         }}
       >
-        {/* Prev */}
-        <div
-          style={{
-            width: "100vw",
-            height: "100vh",
-            background: posts[prevIndex].color,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "2rem",
-            color: "white",
-          }}
-        >
-          {posts[prevIndex].text}
-        </div>
+        {[prevIndex, index, nextIndex].map((i, pos) => {
+          return (
+            <div
+              key={`${i}-${pos}`}
+              style={{
+                width: "100vw",
+                height: "100vh",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "3rem",
+                color: "white",
+                fontWeight: "bold",
+                userSelect: "none",
+                position: "relative",
+              }}
+            >
+              <div style={{ width: "100%", height: "100%", position: "relative" }}>
 
-        {/* Current */}
-        <div
-          style={{
-            width: "100vw",
-            height: "100vh",
-            background: posts[index].color,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "2rem",
-            color: "white",
-          }}
-        >
-          {posts[index].text}
-        </div>
-
-        {/* Next */}
-        <div
-          style={{
-            width: "100vw",
-            height: "100vh",
-            background: posts[nextIndex].color,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "2rem",
-            color: "white",
-          }}
-        >
-          {posts[nextIndex].text}
-        </div>
+                <Vertical posts={posts[i].vertical} />
+              </div>
+            </div>
+          )
+        })}
       </motion.div>
 
-      {/* Indicadores */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+      {/* Indicadores horizontales */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
         {posts.map((_, i) => (
           <div
             key={i}
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
-              i === index ? "bg-white" : "bg-white/50"
-            }`}
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${i === index ? "bg-white w-6" : "bg-white/50"
+              }`}
           />
         ))}
+      </div>
+
+      {/* Contador */}
+      <div className="absolute top-8 left-1/2 -translate-x-1/2 text-white text-sm bg-black/50 px-4 py-2 rounded-full z-10">
+        {index + 1} / {posts.length}
       </div>
     </div>
   );

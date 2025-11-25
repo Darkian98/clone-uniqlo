@@ -1,4 +1,5 @@
 "use client"
+import { Vertical } from "@/components/vertical";
 import { motion, animate, useMotionValue } from "framer-motion";
 import { useState, useRef } from "react";
 
@@ -49,75 +50,6 @@ export default function TikTokScrollStable() {
   };
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden touch-none select-none">
-      <motion.div
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        onDragEnd={handleDragEnd}
-        style={{
-          y,
-          height: "300vh",
-          position: "absolute",
-          top: "-100vh",
-          width: "100%",
-          touchAction: "none",
-        }}
-      >
-        {/* Pantalla previa */}
-        <div
-          style={{
-            height: "100vh",
-            background: posts[prevIndex].color,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "white",
-            fontSize: "2rem",
-          }}
-        >
-          {posts[prevIndex].text}
-        </div>
-
-        {/* Pantalla actual */}
-        <div
-          style={{
-            height: "100vh",
-            background: posts[index].color,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "white",
-            fontSize: "2rem",
-          }}
-        >
-          {posts[index].text}
-        </div>
-
-        {/* Pantalla siguiente */}
-        <div
-          style={{
-            height: "100vh",
-            background: posts[nextIndex].color,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "white",
-            fontSize: "2rem",
-          }}
-        >
-          {posts[nextIndex].text}
-        </div>
-      </motion.div>
-
-      <div className="fixed top-1/2 right-6 transform -translate-y-1/2 flex flex-col items-center gap-1">
-        {posts.map((_, i) => (
-          <div
-            key={i}
-            className={`w-1 h-3 rounded-full transition-all duration-300 ${i === index ? 'h-6 bg-white' : 'h-2 bg-white/50'
-              }`}
-          />
-        ))}
-      </div>
-    </div>
+   <Vertical />
   );
 }
